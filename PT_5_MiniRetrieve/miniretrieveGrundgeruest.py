@@ -13,7 +13,8 @@ noninvindex = collections.defaultdict(lambda: collections.defaultdict(int))
 queries = collections.defaultdict(lambda: collections.defaultdict(int))
 
 ''' ******************************************** DOCUMENT-SECTION ******************************************** '''
-indir = sys.argv[1]
+#indir = sys.argv[1]
+indir = 'documents'
 # Read all Document files
 files = [file for file in os.listdir(indir) if os.path.isfile(os.path.join(indir, file))]
 # length of all documents
@@ -32,15 +33,14 @@ for file in files:
 
 # Textdatei tokenisieren
 
-    for term in re.split("\W+", text):
+        for term in re.split("\W+", text):
             term = term.lower()
 
 # Datenstrukturen aufbauen
-
             invindex[term][file] += 1
             noninvindex[file][term] += 1
 
-# Hier sind die Dokumente fertig indexiert... Wir bauen jetzt die Normalisers und Idfs
+# Hier sind die Dokumente fertig indexiert... Wir bauen jetzt die dNormalisers und Idfs
 
 dnorm = {}
 idf = {}
@@ -53,17 +53,17 @@ for file in noninvindex.keys():
 # Pro Wort: berechne Idf, summiere dnorm auf
 
     for word in noninvindex[file].keys():
-        if not word in idf:
-            numpostings = len( invindex[word].keys() )
-            idf[word] = math.log((1 + numdocs) / (1 + numpostings))
+        documentFreqency = len( invindex[word].keys() )
+        idf[word] = math.log((1 + numdocs) / (1 + documentFreqency))    
         a = noninvindex[file][word] * idf[word]
         dnorm[file] += (a * a)
 
     dnorm[file] = math.sqrt(dnorm[file])
 
-# Lese die Queries
+''' ******************************************** QUERIES-SECTION ******************************************** '''
 
-querydir = sys.argv[2]
+#querydir = sys.argv[2]
+querydir = 'queries'
 
 files = [file for file in os.listdir(querydir) if os.path.isfile(os.path.join(querydir, file))]
 
