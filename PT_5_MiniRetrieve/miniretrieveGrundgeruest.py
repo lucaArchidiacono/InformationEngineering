@@ -19,16 +19,24 @@ files = [file for file in os.listdir(indir) if os.path.isfile(os.path.join(indir
 # length of all documents
 numdocs = len(files)
 
-# Loop over each file
+# Schleife ueber alle Textdateien
+
 for file in files:
     sys.stderr.write("INDEXING: " + file + "\n")
     sys.stderr.flush()
-    # Textdatei lesen
+
+# Textdatei lesen
+
     with open(os.path.join(indir, file), 'r') as infile:
         text = infile.read()
-        # Textdatei tokenisieren
-        for term in text.split():
-            # Datenstrukturen aufbauen
+
+# Textdatei tokenisieren
+
+    for term in re.split("\W+", text):
+            term = term.lower()
+
+# Datenstrukturen aufbauen
+
             invindex[term][file] += 1
             noninvindex[file][term] += 1
 
@@ -41,25 +49,38 @@ idf = {}
 
 for file in noninvindex.keys():
     dnorm[file] = 0.0
-    # Pro Wort: berechne Idf, summiere dnorm auf
+
+# Pro Wort: berechne Idf, summiere dnorm auf
+
     for word in noninvindex[file].keys():
-        idf[word] = math.log((1 + numdocs))
+        if not word in idf:
+            numpostings = len( invindex[word].keys() )
+            idf[word] = math.log((1 + numdocs) / (1 + numpostings))
         a = noninvindex[file][word] * idf[word]
-        dnorm[file] += a * a
+        dnorm[file] += (a * a)
+
     dnorm[file] = math.sqrt(dnorm[file])
 
 # Lese die Queries
+
 querydir = sys.argv[2]
 
 files = [file for file in os.listdir(querydir) if os.path.isfile(os.path.join(querydir, file))]
 
 for file in files:
-    # Querydatei lesen
+
+# Querydatei lesen
+
     with open(os.path.join(querydir, file), 'r') as infile:
         text = infile.read()
-        # Tokenisieren...
-        for word in text.split():
-            # Datenstruktur fuer Queries bauen
+
+# Tokenisieren...
+
+        for word in re.split("\W+", text):
+            word = word.lower()
+
+# Datenstruktur fuer Queries bauen
+
             if len(word):
                 queries[file][word] += 1
 
@@ -72,37 +93,56 @@ queryids = sorted(queries.keys(), key=int)
 for query in queryids:
     sys.stderr.write("QUERY: " + query + "\n")
     sys.stderr.flush()
-    # Querynorm zur�ckstellen, Akku initialisieren
+
+# Querynorm zurueckstellen, Akku initialisieren
+
     qnorm = 0.0
     accu = {}
-    # pro Queryterm:
+
+# pro Queryterm:
+
     for word in queries[query].keys():
-        # Spezialfall: Queryterm kommt in KEINEM Dokument vor. Hat auf Ranking keinen Einfluss, aber �ndert die absoluten Scores
+
+# Spezialfall: Queryterm kommt in KEINEM Dokument vor. Hat auf Ranking keinen Einfluss, aber �ndert die absoluten Scores
+
         if not word in idf:
             idf[word] = math.log(1.0 + numdocs)
-        # Gewicht Queryterm, aufsummieren Qnorm
+
+# Gewicht Queryterm, aufsummieren Qnorm
+
         b = queries[query][word] * idf[word]
         qnorm += (b * b)
-        # Queryterm nachschlagen
+
+# Queryterm nachschlagen
+
         if word in invindex:
-            # Gewicht Queryterm in Dokument
             for document in invindex[word].keys():
+
+# Gewicht Queryterm in Dokument
+
                 a = invindex[word][document] * idf[word]
                 if not document in accu:
                     accu[document] = 0
+
+# Akku aufdatieren
+
                 accu[document] += (a * b)
     qnorm = math.sqrt(qnorm)
-    # Akkus normalisieren
+
+# Akkus normalisieren
+
     for entry in accu.keys():
         if dnorm[entry] == 0:
             accu[entry] = 0
         else:
             accu[entry] *= 1000
-            accu[document] /= (dnorm[entry] * qnorm)
+            accu[entry] /= (dnorm[entry] * qnorm)
 
-    # Rangliste sortieren
+# Rangliste sortieren
+
     results = sorted(accu.items(), key=operator.itemgetter(1), reverse=True)
-    # Ausgabe Resultate
+
+# Ausgabe Resultate
+
     for rankcounter in range(min(10, len(results))):
-        print("{0} Q0 {1} {2} {3} miniRetrieve".format(query, results[rankcounter][0], rankcounter,
-                                                       results[rankcounter][1]))
+        print("{0} Q0 {1} {2} {3} miniRetrieve".format(query, results[rankcounter][0], rankcounter, results[rankcounter][1]))
