@@ -1,1 +1,1 @@
-./collections/custom/docs/longestBookInTheWorld.txt
+./collections/custom/docs/ie1_collection_uk_en.trec
